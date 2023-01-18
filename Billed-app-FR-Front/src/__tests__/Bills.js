@@ -2,11 +2,16 @@
  * @jest-environment jsdom
  */
 
-import {screen, waitFor} from "@testing-library/dom"
+import { screen, waitFor } from "@testing-library/dom"
+import userEvent from '@testing-library/user-event'
 import BillsUI from "../views/BillsUI.js"
 import { bills } from "../fixtures/bills.js"
-import { ROUTES_PATH} from "../constants/routes.js";
-import {localStorageMock} from "../__mocks__/localStorage.js";
+import { ROUTES_PATH } from "../constants/routes.js";
+import { localStorageMock } from "../__mocks__/localStorage.js";
+import Bills from '../containers/Bills.js';
+import mockStore from "../__mocks__/store"
+
+jest.mock("../app/store", () => mockStore)
 
 import router from "../app/Router.js";
 
@@ -35,5 +40,85 @@ describe("Given I am connected as an employee", () => {
       const datesSorted = [...dates].sort(antiChrono)
       expect(dates).toEqual(datesSorted)
     })
+
+    // describe("When I click on new bill button", () => {
+    //   test("Then it should open new Bill page", () => {
+
+    //   })
+    // })
+
+    // describe("When I click on the eye icon", () => {
+    //   test("Then it should open the receipt modal", () => {
+
+    //   })
+    // })
+
+
+  })
+
+})
+
+// test d'intégration getBills
+describe("Given I am a user connected as Employee", () => {
+  describe("When I navigate to Bills", () => {
+    test("fetches bills from mock API GET", async () => {
+      localStorage.setItem("user", JSON.stringify({ type: "Employee", email: "a@a" }));
+      const root = document.createElement("div")
+      root.setAttribute("id", "root")
+      document.body.append(root)
+      router()
+      window.onNavigate(ROUTES_PATH.Dashboard)
+      await waitFor(() => screen.getByText("Validations"))
+      expect(screen.getByTestId("tbody")).toBeTruthy()
+    })
+    describe("When an error occurs on API", () => {
+      beforeEach(() => {
+        jest.spyOn(mockStore, "bills")
+        Object.defineProperty(
+          window,
+          'localStorage',
+          { value: localStorageMock }
+        )
+        window.localStorage.setItem('user', JSON.stringify({
+          type: 'Employee',
+          email: "a@a"
+        }))
+        const root = document.createElement("div")
+        root.setAttribute("id", "root")
+        document.body.appendChild(root)
+        router()
+      })
+      test("fetches bills from an API and fails with 404 message error", async () => {
+
+        mockStore.bills.mockImplementationOnce(() => {
+          return {
+            list: () => {
+              return Promise.reject(new Error("Erreur 404"))
+            }
+          }
+        })
+        window.onNavigate(ROUTES_PATH.Dashboard)
+        await new Promise(process.nextTick);
+        const message = await screen.getByText(/Erreur 404/)
+        expect(message).toBeTruthy()
+      })
+
+      test("fetches messages from an API and fails with 500 message error", async () => {
+
+        mockStore.bills.mockImplementationOnce(() => {
+          return {
+            list: () => {
+              return Promise.reject(new Error("Erreur 500"))
+            }
+          }
+        })
+
+        window.onNavigate(ROUTES_PATH.Dashboard)
+        await new Promise(process.nextTick);
+        const message = await screen.getByText(/Erreur 500/)
+        expect(message).toBeTruthy()
+      })
+    })
+
   })
 })
