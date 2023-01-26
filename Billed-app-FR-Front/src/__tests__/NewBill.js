@@ -5,7 +5,7 @@
 import {fireEvent, screen, waitFor} from "@testing-library/dom"
 import NewBillUI from "../views/NewBillUI.js"
 import NewBill from "../containers/NewBill.js"
-import {ROUTES_PATH} from "../constants/routes.js";
+import {ROUTES, ROUTES_PATH} from "../constants/routes.js";
 import {localStorageMock} from "../__mocks__/localStorage.js";
 import mockStore from "../__mocks__/store"
 import userEvent from '@testing-library/user-event'
@@ -51,7 +51,7 @@ describe("Given I am connected as an employee", () => {
     })
 
     describe("When I am on NewBill Page and I click on submit button", () => {
-        test("A new bill is created ", () => {
+        test("A bill is updated ", () => {
             Object.defineProperty(window, "localStorage", {value: localStorageMock});
             window.localStorage.setItem(
                 "user",
@@ -74,16 +74,113 @@ describe("Given I am connected as an employee", () => {
             });
 
             const handleSubmitMoked = jest.fn(newBillBoard.handleSubmit);
+            const updateBillMocked = jest.fn()
+            newBillBoard.updateBill = updateBillMocked
+
             const submit = screen.getByTestId("form-new-bill");
 
-            submit.addEventListener("submit", () => handleSubmitMoked({
-                
-            }));
+            submit.addEventListener("submit", () => handleSubmitMoked(
+                {
+                    preventDefault: () => {},
+                    target: {
+                        querySelector: () => ({
+                            value: ''
+                        })
+                    }
+                }
+            ));
             fireEvent.submit(submit);
 
             expect(handleSubmitMoked).toHaveBeenCalled();
+            expect(updateBillMocked).toHaveBeenCalled()
+        });
 
-            expect(screen.getByText("Mes notes de frais")).toBeTruthy();
+        test("A new bill is created", () => {
+            Object.defineProperty(window, "localStorage", {value: localStorageMock});
+            window.localStorage.setItem(
+                "user",
+                JSON.stringify({
+                    type: "Employee",
+                })
+            );
+            const onNavigate = (pathname) => {
+                document.body.innerHTML = ROUTES({pathname});
+            };
+
+            const html = NewBillUI();
+            document.body.innerHTML = html;
+
+            const newBillBoard = new NewBill({
+                document,
+                onNavigate,
+                store: mockStore,
+                localStorage: window.localStorage,
+            });
+
+            const handleChangeFileMocked = jest.fn(newBillBoard.handleChangeFile);
+            const storeBillsCreate = jest.fn(() => Promise.resolve({fileUrl: 'fileUrl', key: 'key'}))
+            mockStore.bills().create = storeBillsCreate
+
+            const file = screen.getByTestId("file");
+            file.addEventListener('change', () => handleChangeFileMocked({
+                preventDefault: () => {},
+                target: {
+                    value: ''
+                }
+            }))
+            fireEvent.change(file, {
+                target: {
+                    files: [new File(['(⌐□_□)'], 'chucknorris.png', {type: 'image/png'})],
+                },
+            })
+
+            expect(handleChangeFileMocked).toHaveBeenCalled();
+            expect(storeBillsCreate).toHaveBeenCalled()
+        });
+
+        test("A new bill is not created if uploaded file has wrong extension", () => {
+            Object.defineProperty(window, "localStorage", {value: localStorageMock});
+            window.localStorage.setItem(
+                "user",
+                JSON.stringify({
+                    type: "Employee",
+                })
+            );
+            const onNavigate = (pathname) => {
+                document.body.innerHTML = ROUTES({pathname});
+            };
+
+            const html = NewBillUI();
+            document.body.innerHTML = html;
+
+            const newBillBoard = new NewBill({
+                document,
+                onNavigate,
+                store: mockStore,
+                localStorage: window.localStorage,
+            });
+
+            const handleChangeFileMocked = jest.fn(newBillBoard.handleChangeFile);
+            const storeBillsCreate = jest.fn(() => Promise.resolve({fileUrl: 'fileUrl', key: 'key'}))
+            mockStore.bills().create = storeBillsCreate
+            const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {})
+
+            const file = screen.getByTestId("file");
+            file.addEventListener('change', () => handleChangeFileMocked({
+                preventDefault: () => {},
+                target: {
+                    value: ''
+                }
+            }))
+            fireEvent.change(file, {
+                target: {
+                    files: [new File(['(⌐□_□)'], 'chucknorris.txt', {type: 'text/txt'})],
+                },
+            })
+
+            expect(handleChangeFileMocked).toHaveBeenCalled();
+            expect(storeBillsCreate).not.toHaveBeenCalled()
+            expect(alertMock).toHaveBeenCalledWith("Uniquement fichiers jpg, jpeg ou png acceptés'")
         });
     });
 
@@ -125,10 +222,10 @@ describe("Given I am connected as an employee", () => {
 
             const error = jest.spyOn(console, "error").mockImplementation(() => {});
 
+            window.onNavigate(ROUTES_PATH.NewBill)
             const submit = screen.getAllByTestId("form-new-bill")[0];
             fireEvent.submit(submit)
 
-            window.onNavigate(ROUTES_PATH.NewBill)
             await new Promise(process.nextTick);
             expect(error).toHaveBeenCalledWith(new Error('Erreur 404'))
         })
@@ -137,18 +234,19 @@ describe("Given I am connected as an employee", () => {
 
             mockStore.bills.mockImplementationOnce(() => {
                 return {
-                    update:() => {
+                    update: () => {
                         return Promise.reject(new Error("Erreur 500"))
                     }
                 }
             })
 
-            const error = jest.spyOn(console, "error").mockImplementation(() => {});
+            const error = jest.spyOn(console, "error").mockImplementation(() => {
+            });
 
+            window.onNavigate(ROUTES_PATH.NewBill)
             const submit = screen.getAllByTestId("form-new-bill")[0];
             fireEvent.submit(submit)
 
-            window.onNavigate(ROUTES_PATH.NewBill)
             await new Promise(process.nextTick);
             expect(error).toHaveBeenCalledWith(new Error('Erreur 500'))
         })
