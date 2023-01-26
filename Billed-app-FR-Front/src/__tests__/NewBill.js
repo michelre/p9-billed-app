@@ -10,7 +10,7 @@ import {localStorageMock} from "../__mocks__/localStorage.js";
 import mockStore from "../__mocks__/store"
 import userEvent from '@testing-library/user-event'
 
-jest.mock("../app/store", () => mockStore)
+jest.mock("../app/store", () => mockStore);
 
 import router from "../app/Router.js";
 
@@ -48,21 +48,9 @@ describe("Given I am connected as an employee", () => {
             expect(screen.getByTestId("file")).toBeTruthy();
         })
 
-        // describe("When I click on choose file", () => {
-        //   test("Then I can upload a jpg, jpeg or png file", ()=> {
-
-        //   })
-        // })
-
-        // describe("When I upload a jpg, jpeg or png file", () => {
-        //   test("The file is saved", ()=> {
-
-        //   })
-        // })
-
     })
 
-    /*describe.only("When I am on NewBill Page and I click on submit button", () => {
+    describe("When I am on NewBill Page and I click on submit button", () => {
         test("A new bill is created ", () => {
             Object.defineProperty(window, "localStorage", {value: localStorageMock});
             window.localStorage.setItem(
@@ -97,7 +85,7 @@ describe("Given I am connected as an employee", () => {
 
             expect(screen.getByText("Mes notes de frais")).toBeTruthy();
         });
-    });*/
+    });
 
     // //Integration test POST new Bill
     /**
